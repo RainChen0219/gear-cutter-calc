@@ -473,6 +473,13 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
 }
 .cl-close:hover { background:#f8fafc; color:#0f172a; }
 .cl-body { padding: 14px 20px 6px; }
+.cl-banner {
+  margin: 0 20px 14px; padding: 16px 18px; border-radius: 10px;
+  background: linear-gradient(135deg,#fef9f0 0%,#fff 100%);
+  border: 1px solid #fde68a; text-align: center;
+}
+.cl-banner-text { font-size: 13px; color:#78350f; line-height: 1.7; font-weight: 500; }
+.cl-banner-date { font-size: 11px; color:#b45309; margin-bottom: 6px; letter-spacing: 1px; }
 .cl-ver { margin-bottom: 14px; }
 .cl-ver-head { font-size: 13px; font-weight: 700; color: #1d4ed8; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .cl-ver-date { font-size: 11px; font-weight: 400; color:#94a3b8; }
@@ -508,6 +515,10 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
     <div class="cl-head">
       <div class="cl-title">📢 版本更新</div>
       <div class="cl-sub" id="clSub">本版本相对上一版本的新增与修复</div>
+    </div>
+    <div class="cl-banner">
+      <div class="cl-banner-date">农历九月十九 · 观音出家日</div>
+      <div class="cl-banner-text">以此日为始，愿本工具，能为齿轮刀具行业的从业者省去几分计算的繁琐。</div>
     </div>
     <div class="cl-body" id="clBody"></div>
     <div class="cl-foot">
@@ -1342,7 +1353,8 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
     </div>
   </div>
   <div class="page-footer">
-    配刀参数 · 插齿刀选刀与刀坯参数 v0.30 · 本工具全部计算在本地浏览器完成，不上传任何数据；结果仅供工程师选型参考，正式刀坯参数请与刀具厂汇签确认。
+    配刀参数 · 插齿刀选刀与成品刀参数 v1.0.0 · 本工具全部计算在本地浏览器完成，不上传任何数据；结果仅供工程师选型参考，正式刀坯参数请与刀具厂汇签确认。<br>
+    <span style="color:#b45309;">农历九月十九，以此为始，愿本工具为齿轮刀具从业者省去几分计算的繁琐。</span>
   </div>
 </div>
 
@@ -5100,7 +5112,6 @@ function _doCalculate() {
 const APP_VERSION = '1.0.0';
 const RELEASED_LOG = [
   { version:'1.0.0', date:'2026-10-28', features:[
-      '农历九月十九，观音出家日。以此日为始，愿本工具，能为齿轮刀具行业的从业者省去几分计算的繁琐。',
       '首个正式公开发布版：五用例回归通过，全量刀源选型与参数联动稳定',
       'B1 内齿起始圆改为刀齿顶圆角 R 包络法，新增 R 输入',
       'B2 内花键齿槽宽 E 输入与自动识别（s=πm−E 反推变位）',
