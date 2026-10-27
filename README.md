@@ -4,7 +4,7 @@
 
 ## 在线使用
 
-- GitHub Pages: https://raichen0219.github.io/gear-cutter-calc/
+- GitHub Pages: https://rainchen0219.github.io/gear-cutter-calc/
 - jsDelivr CDN: https://cdn.jsdelivr.net/gh/RainChen0219/gear-cutter-calc@main/index.html
 
 ## 功能
