@@ -532,7 +532,7 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   <div class="subtitle">内/外花键与齿轮 → 插齿刀选刀与成品刀参数</div>
   <details class="version-details">
     <summary>版本记录与修订日志（点击展开） <button type="button" onclick="event.preventDefault();openChangelog(true);" style="margin-left:8px;font-size:12px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 10px;cursor:pointer;">查看更新</button></summary>
-  <div class="subtitle"><b style="color:#1d4ed8;">【V0.30 开发中 · B1 起始圆R包络 + B2 齿槽宽E + A6 DP精简（2026-10-26）】</b>
+  <div class="subtitle"><b style="color:#1d4ed8;">【V1.0.0（原 V0.30 已并入正式版）· B1 起始圆R包络 + B2 齿槽宽E + A6 DP精简（2026-10-26）】</b>
   <b>B1（内齿起始圆=刀齿顶圆角R包络法）</b>：新增「刀齿顶圆角 R」输入（默认0.1m）；内齿起始圆/终止圆 DFimin 改为由插齿刀齿顶圆包络确定（Colbourne《The Geometric Design of Internal Gear Pairs》A20 limit circle：R_L2²=R_b2²+[√(r_a0²−r_b0²)+(r_b2−r_b1)tanα′]²，圆角以圆心半径 r_c=r_a0−R 近似），随选刀档联动重算；输入图纸 DF 后显示"包络 vs 图纸 DFimin"判定（包络≥图纸=渐开线满足，不足红色提示换刀）。外齿 TIF max 输入语义保留，R 包络提示齿根圆弧最低点可能更深（做刀以实测齿根为准）。<br>
   <b>B2（内花键齿槽宽 E 输入/识别）</b>：新增「齿槽宽 E」输入（仅内齿/内花键显示；图纸标 E 而非齿厚，如用例2 内花键 6.152/6.089/6.052）；填 E 自动换算齿厚 s=πm−E 反推制造变位 x₁，与 M/齿厚/公法线做一致性校验；s 与 E 同填时校验互补（s+E=πm）；防呆：E 须为正且 &lt;周节 πm。<br>
   <b>A6（英制 DP 精简）</b>：英制径节模式仅留 DP 输入（切换单位即 m 框变 DP，去除 DP÷M 输入项）——现状已满足，本轮核验保留。<br>
