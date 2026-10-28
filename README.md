@@ -1,5 +1,7 @@
 # 配刀参数计算器
 
+![release](https://img.shields.io/badge/release-v1.0.0-2ea44f) ![html](https://img.shields.io/badge/html-100%25-orange)
+
 内/外花键与齿轮 → 插齿刀选刀与成品刀参数单文件工具（纯前端，无后端）。
 
 ## 在线使用
