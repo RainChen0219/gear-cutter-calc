@@ -532,7 +532,10 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   <div class="subtitle">内/外花键与齿轮 → 插齿刀选刀与成品刀参数</div>
   <details class="version-details">
     <summary>版本记录与修订日志（点击展开） <button type="button" onclick="event.preventDefault();openChangelog(true);" style="margin-left:8px;font-size:12px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 10px;cursor:pointer;">查看更新</button></summary>
-  <div class="subtitle"><b style="color:#1d4ed8;">【V1.0.0（原 V0.30 已并入正式版）· B1 起始圆R包络 + B2 齿槽宽E + A6 DP精简（2026-10-28）】</b>
+  <div class="subtitle"><b style="color:#1d4ed8;">【V1.0.1 · 刀具齿形尺寸链补全（2026-10-29）】</b>
+  <b>齿形尺寸链补全</b>：把做刀图纸需要、此前未显式输出的刀具齿形参数全部补齐并同步到刀档卡与设计图纸参数表（⑨）——刀具齿根圆 d_f0（内齿 d_f0=小径−2a₀−2c；外齿 d_f0=2a₀−大径−2c）、齿顶高 ha₀/齿根高 hf₀/全齿高 h₀、分度圆齿厚 s₀=m(π/2+2x₀tanα)、前端面修正齿形角（含前角 γ、后角 αe 修正）。插齿刀齿根间隙系数固定 c*=0.25（成都工具研究所算例 + GB/T 1356），与工件基本齿廓配合顶隙（GB c=0.25、DIN cP=0.10）是两个概念，不随工件标准变化。<br>
+  <b>修复</b>：短齿制/手改齿廓系数不再误判为标准现货刀、改走包络；R/倒棱未填时给经验默认（0.1m）并标注"需按图纸核对"；草稿恢复不再自动还原实测大/小径与刀坯实测值，避免换工件后旧实测值污染配刀。五用例回归通过，新增值与各用例设计图一致。<br>
+  <b style="color:#1d4ed8;">【V1.0.0（原 V0.30 已并入正式版）· B1 起始圆R包络 + B2 齿槽宽E + A6 DP精简（2026-10-28）】</b>
   <b>B1（内齿起始圆=刀齿顶圆角R包络法）</b>：新增「刀齿顶圆角 R」输入（默认0.1m）；内齿起始圆/终止圆 DFimin 改为由插齿刀齿顶圆包络确定（Colbourne《The Geometric Design of Internal Gear Pairs》A20 limit circle：R_L2²=R_b2²+[√(r_a0²−r_b0²)+(r_b2−r_b1)tanα′]²，圆角以圆心半径 r_c=r_a0−R 近似），随选刀档联动重算；输入图纸 DF 后显示"包络 vs 图纸 DFimin"判定（包络≥图纸=渐开线满足，不足红色提示换刀）。外齿 TIF max 输入语义保留，R 包络提示齿根圆弧最低点可能更深（做刀以实测齿根为准）。<br>
   <b>B2（内花键齿槽宽 E 输入/识别）</b>：新增「齿槽宽 E」输入（仅内齿/内花键显示；图纸标 E 而非齿厚，如用例2 内花键 6.152/6.089/6.052）；填 E 自动换算齿厚 s=πm−E 反推制造变位 x₁，与 M/齿厚/公法线做一致性校验；s 与 E 同填时校验互补（s+E=πm）；防呆：E 须为正且 &lt;周节 πm。<br>
   <b>A6（英制 DP 精简）</b>：英制径节模式仅留 DP 输入（切换单位即 m 框变 DP，去除 DP÷M 输入项）——现状已满足，本轮核验保留。<br>
@@ -1296,10 +1299,16 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">模数 M₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_m0"></td>
             <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">齿数 z₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_z0"></td></tr>
-        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">压力角 α₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_alpha0"></td>
-            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">分圆直径 d₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_d0"></td></tr>
-        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">基圆直径 db₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_db0"></td>
-            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">刀坯外径 da₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_da0"></td></tr>
+        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">名义压力角 α₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_alpha0"></td>
+            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">修正齿形角 α₀′（前端面）</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_alpha0Corr"></td></tr>
+        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">分圆直径 d₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_d0"></td>
+            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">基圆直径 db₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_db0"></td></tr>
+        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">刀坯外径 da₀（齿顶圆）</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_da0"></td>
+            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">齿根圆 d_f0</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_df0"></td></tr>
+        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">齿顶高 ha₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_ha0"></td>
+            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">齿根高 hf₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_hf0"></td></tr>
+        <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">全齿高 h₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_h0"></td>
+            <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">分圆齿厚 s₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_s0"></td></tr>
         <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">刀具变位 x₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_x0"></td>
             <td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">中心距 a₀</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_a0"></td></tr>
         <tr><td style="border:1px solid #d1d5db;padding:5px 8px;background:#f9fafb;">刀具类型</td><td style="border:1px solid #d1d5db;padding:5px 8px;" id="dw_type"></td>
@@ -1353,7 +1362,7 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
     </div>
   </div>
   <div class="page-footer">
-    配刀参数 · 插齿刀选刀与成品刀参数 v1.0.0 · 本工具全部计算在本地浏览器完成，不上传任何数据；结果仅供工程师选型参考，正式刀坯参数请与刀具厂汇签确认。<br>
+    配刀参数 · 插齿刀选刀与成品刀参数 v1.0.1 · 本工具全部计算在本地浏览器完成，不上传任何数据；结果仅供工程师选型参考，正式刀坯参数请与刀具厂汇签确认。<br>
     <span style="color:#b45309;">农历九月十九，以此为始，愿本工具为齿轮刀具从业者省去几分计算的繁琐。</span>
   </div>
 </div>
@@ -1385,7 +1394,11 @@ function loadInputs(){
   if(!raw) return;
   try {
     var data = JSON.parse(raw);
+    // 实测基准值（工件实测大/小径、刀坯实测外径）与具体工件/刀坯强绑定，不随草稿自动恢复，
+    // 避免换工件后旧实测值（最高优先级）污染配刀；公差 max/min 会由软填重新给出中值。
+    var NO_RESTORE = { daMeasured:1, dfMeasured:1, da0Measured:1 };
     Object.keys(data).forEach(function(id){
+      if(NO_RESTORE[id]) return;
       var el = document.getElementById(id);
       if(!el) return;
       if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!data[id];
@@ -1930,7 +1943,7 @@ function findClosestModule(m) {
 // α=30°：默认走国标JB/T 7967档表（国内刀源，案例4验证）；
 //        DIN 5480工件额外参考Liebherr外资刀源档表（并列显示，不替代国标推荐）
 // α=20°/25°走GB/T 6081-2001
-function findStandardOptions(m, isInternal, alphaDeg, standardNo) {
+function findStandardOptions(m, isInternal, alphaDeg, standardNo, profileModified) {
   const options = [];
   const { stdM, isNonStandard } = findClosestModule(m);
   const is30 = Math.abs(alphaDeg - 30) < 0.01;
@@ -2000,7 +2013,7 @@ function findStandardOptions(m, isInternal, alphaDeg, standardNo) {
         // 标准现货刀（da0 物理固定、由官方刀坯反推 x0）：
         //  30°：GB/T 3478.1 国标现货（DIN 走包络）；20°：GB/T 6081 标准档（非非标模数）；
         //  25°/15°：GB/T 6081 为 20° 标准、借用不精确，走包络（stdBlank=false）。
-        stdBlank: is30 ? (standardNo === 'GB/T 3478.1') : (Math.abs(alphaDeg - 20) < 0.01 && !isNonStandard),
+        stdBlank: is30 ? (standardNo === 'GB/T 3478.1' && !profileModified) : (Math.abs(alphaDeg - 20) < 0.01 && !isNonStandard && !profileModified),
       });
     }
   }
@@ -4273,7 +4286,10 @@ function _doCalculate() {
   })();
 
   // ③ 选公称直径档（30°走JB/T 7967标准表，20°/25°走GB/T 6081标准表 + 干涉校验）
-  const allOptions = findStandardOptions(m, isInternal, alphaDeg, standardNo);
+  // 短齿制/手改齿廓系数（ha/hf/c）：标准现货刀按正常齿设计、不匹配，走包络定制（stdBlank=false）
+  const _profileModified = (document.getElementById('toothProfile').value === 'stub')
+    || !!(haInput || hfInput || cStarInput);
+  const allOptions = findStandardOptions(m, isInternal, alphaDeg, standardNo, _profileModified);
   const feasibleOptions = [];
   let rootCaveat = '';
   // 内齿未填实测大径时，估算值随刀具选择变化
@@ -4390,23 +4406,75 @@ function _doCalculate() {
     opts = opts || {};
     const selected = !!opts.selected;
     const selectable = !!opts.selectable;
-    const db0 = opt.d0 * Math.cos(correctedProfileAngle(alphaDeg) * Math.PI / 180);
     const typeLabel = opt.type === 'cone' ? '锥柄' : opt.type === 'cup' ? '碗形' : '盘形';
-    // 内齿：包络反推刀坯；外齿用档表刀坯
-    let da0Envelope = opt.da0;
-    let shaperDesign = null;
+    // v1.0.1：刀档卡几何与 renderMeshForOpt 完全同口径——标准刀反推 x0、实测刀坯反推、定制包络
+    const _cardDfRoot = dfRootCutFor(opt);
+    const _tanC = Math.tan(alphaDeg * Math.PI / 180);
+    const _cosC = Math.cos(alphaDeg * Math.PI / 180);
+    let shaperDesign = null, cardX0 = null, cardDa0 = null;
     if (isInternal) {
-      const _useStdForCard = opt.stdBlank && da0Measured === null && x0Manual === null;
-      shaperDesign = designShaperInternal(m, z, alphaDeg, sCalc, _useStdForCard ? DfRoot : DfRootDeep, opt.z0, x0Default);
-      da0Envelope = shaperDesign ? shaperDesign.da : opt.da0;
-    } else if (opt.da0 === null) {
-      // 外齿定制刀（盘形/碗形，刀坯走包络不固定）：按推荐 x0 包络算刀坯
-      const _rExt = shaperX0RangeExternal(m, z, alphaDeg, sCalc, DfRoot, opt.z0);
-      shaperDesign = designShaperExternal(m, z, alphaDeg, sCalc, DfRoot, opt.z0, _rExt.x0rec);
-      da0Envelope = shaperDesign ? shaperDesign.da : opt.da0;
+      const _bestIsStd = opt.stdBlank && da0Measured === null && x0Manual === null;
+      if (_bestIsStd || da0Measured !== null) {
+        // 标准现货刀（官方 da0 固定）或喂实测刀坯：由包络闭合反推前端面 x0
+        const _blankDa0 = da0Measured !== null ? da0Measured : opt.da0;
+        const _x1S = (Math.PI / 2 - sCalc / m) / (2 * _tanC);
+        const _aS = (_cardDfRoot - _blankDa0) / 2;
+        const _cosApS = Math.max(-1, Math.min(1, m * (z - opt.z0) / 2 * _cosC / _aS));
+        const _apS = Math.acos(_cosApS) * 180 / Math.PI;
+        cardX0 = _x1S - (inv(_apS) - inv(alphaDeg)) * (z - opt.z0) / (2 * _tanC);
+        shaperDesign = designShaperInternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = _blankDa0;
+      } else {
+        // 包络（盘形/定制/手动 x0）
+        const _tipDia = dfMeasured !== null ? dfMeasured : dfCalc;
+        const _r0 = shaperX0Range(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, _tipDia / 2);
+        cardX0 = x0Manual !== null ? x0Manual : _r0.x0rec;
+        shaperDesign = designShaperInternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = shaperDesign.da;
+      }
+    } else {
+      const _rExt = shaperX0RangeExternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0);
+      function _extX0FromBlank(daBlank){
+        const _x1S = (sCalc / m - Math.PI / 2) / (2 * _tanC);
+        const _aS = (daBlank + _cardDfRoot) / 2;
+        const _cosAp = Math.max(-1, Math.min(1, m * (z + opt.z0) * _cosC / (2 * _aS)));
+        const _apS = Math.acos(_cosAp) * 180 / Math.PI;
+        return (inv(_apS) - inv(alphaDeg)) * (z + opt.z0) / (2 * _tanC) - _x1S;
+      }
+      if (x0Manual !== null) {
+        cardX0 = x0Manual;
+        shaperDesign = designShaperExternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = da0Measured !== null ? da0Measured : shaperDesign.da;
+      } else if (da0Measured !== null) {
+        cardX0 = _extX0FromBlank(da0Measured);
+        shaperDesign = designShaperExternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = da0Measured;
+      } else if (opt.da0 === null) {
+        cardX0 = _rExt.x0rec;
+        shaperDesign = designShaperExternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = shaperDesign.da;
+      } else {
+        cardX0 = _extX0FromBlank(opt.da0);
+        shaperDesign = designShaperExternal(m, z, alphaDeg, sCalc, _cardDfRoot, opt.z0, cardX0);
+        cardDa0 = opt.da0;
+      }
     }
     const useStdBlank = isInternal && opt.stdBlank && da0Measured === null && x0Manual === null;
-    const da0Show = da0Measured !== null ? da0Measured : (useStdBlank ? opt.da0 : da0Envelope);
+    const da0Show = da0Measured !== null ? da0Measured : (useStdBlank ? opt.da0 : cardDa0);
+    const db0 = opt.d0 * Math.cos(correctedProfileAngle(alphaDeg) * Math.PI / 180);
+    // v1.0.1：齿根圆/齿顶高/齿根高/全齿高/分圆齿厚/修正齿形角（齿根间隙系数固定 0.25）
+    const _cClearCard = 0.25 * m;
+    const _workTipDiaCard = isInternal
+      ? (dfMeasured !== null ? dfMeasured : dfCalc)
+      : (daMeasured !== null ? daMeasured : daCalc);
+    const _df0Card = isInternal
+      ? (_workTipDiaCard - 2 * shaperDesign.a - 2 * _cClearCard)
+      : (2 * shaperDesign.a - _workTipDiaCard - 2 * _cClearCard);
+    const _ha0Card = (da0Show - opt.d0) / 2;
+    const _hf0Card = (opt.d0 - _df0Card) / 2;
+    const _h0Card = (da0Show - _df0Card) / 2;
+    const _s0Card = m * (Math.PI / 2 + 2 * cardX0 * Math.tan(alphaDeg * Math.PI / 180));
+    const _alpha0CorrCard = correctedProfileAngle(alphaDeg);
     const infeasibleCheck = allFeasibleEmpty ? checkFeasibility(opt, z, isInternal, alphaDeg, x) : null;
     const isInfeasible = allFeasibleEmpty && infeasibleCheck && !infeasibleCheck.feasible;
     const borderColor = isInfeasible ? '#fca5a5' : selected ? '#2563eb' : (opt.foreign ? '#93c5fd' : '#e5e7eb');
@@ -4467,6 +4535,13 @@ function _doCalculate() {
           <div><span style="color:#6b7280;">分圆直径：</span>${opt.d0.toFixed(2)} mm</div>
           <div><span style="color:#6b7280;">基圆直径：</span>${db0.toFixed(2)} mm</div>
           <div><span style="color:#6b7280;">刀坯外径：</span>${da0Show.toFixed(2)} mm${isInternal ? (useStdBlank ? '（标准现货刀）' : '（包络）') : ''}</div>
+          <div style="grid-column:1/-1;margin-top:4px;padding-top:6px;border-top:1px dashed #e5e7eb;font-size:11px;color:#6b7280;">齿形尺寸（v1.0.1）</div>
+          <div><span style="color:#6b7280;">齿根圆 d_f0：</span>${_df0Card.toFixed(2)} mm</div>
+          <div><span style="color:#6b7280;">修正齿形角：</span>${_alpha0CorrCard.toFixed(2)}°</div>
+          <div><span style="color:#6b7280;">齿顶高 ha₀：</span>${_ha0Card.toFixed(2)} mm</div>
+          <div><span style="color:#6b7280;">齿根高 hf₀：</span>${_hf0Card.toFixed(2)} mm</div>
+          <div><span style="color:#6b7280;">全齿高 h₀：</span>${_h0Card.toFixed(2)} mm</div>
+          <div><span style="color:#6b7280;">分圆齿厚 s₀：</span>${_s0Card.toFixed(2)} mm</div>
           ${structHtml}
           ${infeasibleHtml}
           ${blankShortHtml}
@@ -4695,7 +4770,9 @@ function _doCalculate() {
           const _dfEnv = _envForR(_Rval);
           dfEnvInternalFinal = _dfEnv; // 供⑨表 dw_dForm 最终赋值引用
           if (formDInput === null) {
-            _dfEl0.textContent = _dfEnv.toFixed(2) + ' mm（R包络·R=' + _Rval.toFixed(3) + '，随选刀联动）';
+            const _Rmanual = isFinite(_RIn) && _RIn > 0;
+            _dfEl0.textContent = _dfEnv.toFixed(2) + ' mm（R包络·R=' + _Rval.toFixed(3)
+              + (_Rmanual ? '' : '·经验默认需核对') + '，随选刀联动）';
             if (_dwEl0) _dwEl0.textContent = fmtLen(_dfEnv,3);
           } else {
             const _ok = _dfEnv >= formDInput;
@@ -4914,7 +4991,7 @@ function _doCalculate() {
   const chamferA = chamferC * 0.9;                      // 圆周宽度，保持 c:a=0.1:0.09
   const chamferAngle = Math.atan2(chamferC, chamferA) * 180 / Math.PI; // 约48°
   document.getElementById('chamferDepth').textContent = chamferC.toFixed(2)
-    + ' mm' + (chamferCInput !== null ? '（已确认）' : '（=0.1m·默认）');
+    + ' mm' + (chamferCInput !== null ? '（已确认）' : '（=0.1m·经验默认，需按图纸核对）');
   document.getElementById('chamferWidth').textContent = chamferA.toFixed(2) + ' mm（=0.9c）';
   document.getElementById('chamferAngle').textContent = '约' + chamferAngle.toFixed(0) + '°';
   document.getElementById('chamferMethod').innerHTML =
@@ -5057,6 +5134,25 @@ function _doCalculate() {
     const _a0Show = design ? design.a : 0;
     document.getElementById('dw_x0').textContent = _x0Show.toFixed(4);
     document.getElementById('dw_a0').textContent = fmtLen(_a0Show,3);
+    // v1.0.1：刀具齿形尺寸链补全——齿根圆/齿顶高/齿根高/全齿高/分圆齿厚/修正齿形角
+    // 刀具齿根间隙系数固定 c*=0.25（GB/T 1356 标准顶隙；成都工具所《插齿刀设计》间隙系数0.25），
+    // 与工件基本齿廓的配合顶隙（如 DIN 5480 cP=0.10）是两个概念，不随工件标准变化。
+    const _cClear = 0.25 * m;                                // 刀具齿根与工件齿顶的标准顶隙 c = c*·m
+    const _workTipDia = isInternal ? dwDf : dwDa;                  // 工件齿顶圆：内齿=小径，外齿=大径
+    const _df0 = isInternal
+      ? (_workTipDia - 2 * _a0Show - 2 * _cClear)
+      : (2 * _a0Show - _workTipDia - 2 * _cClear);
+    const _ha0 = (_da0Final - opt.d0) / 2;
+    const _hf0 = (opt.d0 - _df0) / 2;
+    const _h0 = (_da0Final - _df0) / 2;
+    const _s0 = m * (Math.PI / 2 + 2 * _x0Show * Math.tan(alphaDeg * Math.PI / 180));
+    const _alpha0Corr = correctedProfileAngle(alphaDeg);
+    document.getElementById('dw_df0').textContent = fmtLen(_df0,3);
+    document.getElementById('dw_ha0').textContent = fmtLen(_ha0,3);
+    document.getElementById('dw_hf0').textContent = fmtLen(_hf0,3);
+    document.getElementById('dw_h0').textContent = fmtLen(_h0,3);
+    document.getElementById('dw_s0').textContent = fmtLen(_s0,3);
+    document.getElementById('dw_alpha0Corr').textContent = _alpha0Corr.toFixed(3) + '°';
     document.getElementById('dw_type').textContent = opt.type === 'cone' ? '锥柄' : opt.type === 'cup' ? '碗形' : '盘形';
     document.getElementById('dw_nominal').textContent = 'φ' + opt.nominal;
     // 刀具结构字段：内孔/厚度统一取结构表（权威），精度/材料取用户选择
@@ -5109,8 +5205,20 @@ function _doCalculate() {
  *    内容变了（新增修复）就再弹一次，内容没变不再打扰。
  *  - 跨版本：用户上次看到版本之后新发布的所有版本，连同未发布内容一并展示。
  */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const RELEASED_LOG = [
+  { version:'1.0.1', date:'2026-10-29', features:[
+      '刀具齿根圆 d_f0 显式输出（内齿 d_f0=小径−2a₀−2c；外齿 d_f0=2a₀−大径−2c）',
+      '齿顶高 ha₀ / 齿根高 hf₀ / 全齿高 h₀ 显式输出',
+      '刀具分度圆齿厚 s₀ 显式输出（s₀=m(π/2+2x₀tanα)）',
+      '前端面修正齿形角显式输出（含前角 γ、后角 αe 修正）',
+      '刀档卡与设计图纸参数表（⑨）同步输出上述齿形尺寸',
+    ], fixes:[
+      '短齿制/手改齿廓系数不再误判为标准现货刀，改走包络',
+      '插齿刀齿根间隙系数固定 0.25，与工件基本齿廓顶隙（DIN cP=0.10）区分',
+      'R/倒棱未填时给经验默认并标注需按图纸核对',
+      '草稿恢复不再自动还原实测大/小径、刀坯实测值，避免换工件后旧实测值污染配刀',
+    ]},
   { version:'1.0.0', date:'2026-10-28', features:[
       '首个正式公开发布版：五用例回归通过，全量刀源选型与参数联动稳定',
       'B1 内齿起始圆改为刀齿顶圆角 R 包络法，新增 R 输入',
