@@ -5286,8 +5286,8 @@ function openChangelog(force){
   if(PENDING_LOG && (PENDING_LOG.features.length || PENDING_LOG.fixes.length)){
     html += _renderVerBlock(PENDING_LOG, true);
   }
-  // 自动弹与手动查看均展示全部已发布版本日志
-  RELEASED_LOG.forEach(function(v){ html += _renderVerBlock(v, false); });
+  // 弹窗只展示：当前版本 + 上一版本；更早的历史版本在页面"版本记录与修订日志"展开查看
+  RELEASED_LOG.slice(0, 2).forEach(function(v){ html += _renderVerBlock(v, false); });
   if(!html){ html = '<div class="cl-ver"><div class="cl-sec-title">暂无新内容</div></div>'; }
   document.getElementById('clBody').innerHTML = html;
   // 手动查看时隐藏"不再提醒"按钮（仅自动弹显示）
