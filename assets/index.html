@@ -221,6 +221,19 @@ input.suggested-input {
 }
 .accept-btn:hover { background: #b45309; }
 
+/* ===== 拍照识图 OCR 上传区 ===== */
+.ocr-upload-bar {
+  margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4);
+  background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md);
+}
+.ocr-upload-bar .ocr-title { font-size: var(--fs-sm); font-weight: 600; color: #1e40af; margin-bottom: var(--space-2); }
+.ocr-upload-bar .ocr-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ocr-upload-bar input[type="file"] { font-size: var(--fs-sm); }
+.ocr-status { font-size: var(--fs-sm); color: #374151; }
+.ocr-status.error { color: #b91c1c; font-weight: 600; }
+.ocr-status.success { color: #047857; font-weight: 600; }
+.ocr-status.loading { color: #1d4ed8; }
+
 /* 软填充逐条采纳列表（R12） */
 #acceptAllBar {
   display: none; margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4);
@@ -543,6 +556,14 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   </details>
 
   <div class="section-title">基本参数（必填）</div>
+
+  <div class="ocr-upload-bar" id="ocrUploadBar">
+    <div class="ocr-title">拍照识图自动填写（识别后请逐字段核对采纳）</div>
+    <div class="ocr-row">
+      <input type="file" id="ocrFileInput" accept="image/*" capture="environment">
+      <span id="ocrStatus" class="ocr-status"></span>
+    </div>
+  </div>
 
   <!-- 组① 工件定义：常驻展开 -->
   <fieldset class="input-group">
@@ -3547,7 +3568,7 @@ function suggestBallDp() {
   // 恢复后触发一次压力角 change，重建标准号下拉与系数联动
   var _aEl = document.getElementById('alpha');
   if(_aEl) _aEl.dispatchEvent(new Event('change'));
-  ['fpt','Fp','ess','esi','thSmax','thSmin','thSvmax','thSvmin','faceWidth','daMeasured','dfMeasured','tipChamferC','ballDiameter'].forEach(attachSuggest);
+  ['fpt','Fp','ess','esi','thSmax','thSmin','thSvmax','thSvmin','faceWidth','daMeasured','dfMeasured','tipChamferC','ballDiameter','m','z','alpha','gearType'].forEach(attachSuggest);
   // 齿顶倒角软填充：m/压力角/内外齿变化时，默认建议 0.1m（径向深度，约45°）
   suggestChamfer();
   ['m','z','alpha','gearType','unitSystem'].forEach(function(id){
@@ -3605,6 +3626,65 @@ function suggestBallDp() {
   // 输入框被人工清空（且非建议态）时，解除confirmed，以便重新允许推算
   document.addEventListener('DOMContentLoaded',function(){ updateTolerancePanels(); });
   updateTolerancePanels();
+})();
+
+/* ===== v1.1 拍照识图 OCR（qwen-vl-ocr，经服务器代理，DASHSCOPE 密钥不暴露前端） ===== */
+(function(){
+  var OCR_API_BASE = 'http://116.62.41.112:3000';
+  var OCR_TOKEN = '279ea08eee5ef5ac2988649d0e597c8ba8e8f37731b00feb';
+  var fileInput = document.getElementById('ocrFileInput');
+  var statusEl = document.getElementById('ocrStatus');
+  if(!fileInput || !statusEl) return;
+
+  function setStatus(msg, type){
+    statusEl.textContent = msg || '';
+    statusEl.className = 'ocr-status' + (type ? ' ' + type : '');
+  }
+  function readFileAsDataURL(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(new Error('读取图片失败')); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function applyFields(fields){
+    var ids = [];
+    if(fields.m != null){ suggest('m', Number(fields.m)); ids.push('m'); }
+    if(fields.z != null){ suggest('z', Number(fields.z)); ids.push('z'); }
+    if(fields.alpha != null){ suggest('alpha', String(fields.alpha)); ids.push('alpha'); }
+    if(fields.gearType != null){ suggest('gearType', String(fields.gearType)); ids.push('gearType'); }
+    // 标注来源为拍照识图
+    ids.forEach(function(id){
+      if(pendingMeta[id]){ pendingMeta[id].source = '拍照识图'; }
+    });
+    if(ids.length) refreshAcceptBar();
+    return ids.length;
+  }
+
+  fileInput.addEventListener('change', function(){
+    var file = fileInput.files && fileInput.files[0];
+    if(!file) return;
+    setStatus('正在识别，请稍候…', 'loading');
+    readFileAsDataURL(file).then(function(dataUrl){
+      return fetch(OCR_API_BASE + '/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OCR_TOKEN },
+        body: JSON.stringify({ image: dataUrl })
+      });
+    }).then(function(resp){
+      return resp.json().then(function(data){
+        if(!resp.ok || data.error) throw new Error(data.message || data.error || ('请求失败(' + resp.status + ')'));
+        return data;
+      });
+    }).then(function(data){
+      var n = applyFields(data.fields || {});
+      if(n > 0) setStatus('识别完成，已填入 ' + n + ' 项（橙色），请逐字段核对后点「采纳」，未采纳不参与计算。', 'success');
+      else setStatus('未能从图中识别出有效参数，请更换清晰图片或手动填写。', 'error');
+    }).catch(function(err){
+      setStatus('识别失败：' + (err.message || err), 'error');
+    });
+  });
 })();
 
 function calculate() {

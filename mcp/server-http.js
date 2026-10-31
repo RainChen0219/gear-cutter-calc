@@ -21,6 +21,108 @@ const { compute } = require(path.join(__dirname, '..', 'lib', 'engine'));
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const MCP_TOKEN = process.env.MCP_TOKEN || '';
+const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY || '';
+const OCR_MODEL = process.env.OCR_MODEL || 'qwen-vl-ocr';
+const DASHSCOPE_BASE = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+// OCR 识别结果提示词：只提取配刀核心字段，强制严格 JSON
+const OCR_PROMPT = [
+  '你是齿轮刀具行业的 OCR 识别助手。请识别这张齿轮/刀具设计图纸或参数照片中的齿轮参数。',
+  '只提取以下字段，识别不到的字段值设为 null：',
+  'm: 模数（数字，忽略单位 mm）；',
+  'z: 齿数（整数）；',
+  'alpha: 压力角，只允许 15、20、25、30 中的一个（数字）；',
+  'gearType: 内齿/内齿圈/内花键填 "internal"，外齿/外齿轮/外花键填 "external"；',
+  'standardNo: 标准号字符串（如 GB/T 1356、GB/T 3478.1、DIN 5480、DIN 867、AGMA），没有则 null。',
+  '注意区分模数 m 与齿数 z，不要把尺寸直径（带 Ø 的数字）误判为模数。',
+  '只输出一个 JSON 对象，不要输出任何解释、注释或 markdown 代码块标记，格式：',
+  '{"m":null,"z":null,"alpha":null,"gearType":null,"standardNo":null}',
+].join('\n');
+
+// 从模型输出中稳健提取 JSON（兼容 markdown 代码块、前后多余文本）
+function extractOcrJson(text) {
+  if (!text) throw new Error('模型返回为空');
+  let s = String(text).trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) throw new Error('模型输出中未找到 JSON');
+  return JSON.parse(s.slice(start, end + 1));
+}
+
+// 校验并规范化 OCR 字段，只保留合法值
+function normalizeOcrFields(fields) {
+  const out = {};
+  if (fields.m != null && !isNaN(Number(fields.m)) && Number(fields.m) > 0) out.m = String(Number(fields.m));
+  if (fields.z != null && !isNaN(Number(fields.z)) && Number(fields.z) > 0) out.z = String(parseInt(Number(fields.z), 10));
+  if (fields.alpha != null && ['15', '20', '25', '30'].includes(String(Number(fields.alpha)))) {
+    out.alpha = String(Number(fields.alpha));
+  }
+  if (fields.gearType === 'internal' || fields.gearType === 'external') out.gearType = fields.gearType;
+  if (fields.standardNo != null && String(fields.standardNo).trim()) {
+    out.standardNo = String(fields.standardNo).trim();
+  }
+  return out;
+}
+
+async function handleOcr(req, res, rawBody) {
+  let payload;
+  try {
+    payload = JSON.parse(rawBody || '{}');
+  } catch (e) {
+    res.writeHead(400, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'invalid_json' }));
+    return;
+  }
+  if (!DASHSCOPE_API_KEY) {
+    res.writeHead(503, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'ocr_not_configured', message: '服务器未配置 DASHSCOPE_API_KEY' }));
+    return;
+  }
+  let dataUrl = payload.image || '';
+  if (dataUrl && !/^data:/i.test(dataUrl)) dataUrl = 'data:image/jpeg;base64,' + dataUrl;
+  if (!dataUrl) {
+    res.writeHead(400, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'missing_image' }));
+    return;
+  }
+  try {
+    const upstream = await fetch(DASHSCOPE_BASE + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + DASHSCOPE_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OCR_MODEL,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: OCR_PROMPT },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        }],
+      }),
+    });
+    const data = await upstream.json();
+    if (!upstream.ok || data.error) {
+      const msg = (data.error && (data.error.message || data.error.code)) || ('upstream_' + upstream.status);
+      res.writeHead(502, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'ocr_upstream_error', message: String(msg) }));
+      return;
+    }
+    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    const parsed = extractOcrJson(content);
+    const fields = normalizeOcrFields(parsed);
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, fields, usage: data.usage || null }));
+  } catch (e) {
+    console.error('OCR 请求失败：', e);
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'ocr_failed', message: String(e && e.message || e) }));
+  }
+}
 
 // 工件参数 JSON Schema（与 stdio 版保持一致）
 const PARAM_PROPERTIES = {
@@ -102,10 +204,33 @@ function readBody(req) {
 }
 
 const httpServer = http.createServer(async (req, res) => {
+  // CORS：允许网页端（如 GitHub Pages）跨域调用 /ocr 与 /mcp
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   // 健康检查
   if (req.method === 'GET' && (req.url === '/health' || req.url === '/')) {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, service: 'gear-cutter-calc-mcp', version: '1.0.0' }));
+    return;
+  }
+
+  // OCR 识图端点（同样需要 Bearer 鉴权）
+  if (req.method === 'POST' && req.url === '/ocr') {
+    if (!checkAuth(req)) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+    const rawBody = await readBody(req);
+    await handleOcr(req, res, rawBody);
     return;
   }
 
