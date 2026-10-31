@@ -3749,6 +3749,14 @@ function _doCalculate() {
   ['fpt','Fp','ess','esi'].forEach(function(id){
     if (pendingSuggestions[id] === true) acceptSuggestion(id);
   });
+  // 拍照识图核心字段未确认前不参与计算：提示先采纳或清空
+  var _ocrPending = ['m','z','alpha','gearType','standardNo'].filter(function(id){
+    return pendingSuggestions[id] === true;
+  });
+  if (_ocrPending.length) {
+    showInputError('有 ' + _ocrPending.length + ' 项拍照识图值待确认（橙色）。请在上方待确认条点「采纳」或「清空」后再计算，未确认值不会参与计算。');
+    return;
+  }
   // 内齿结构选项仅在内齿时显示
   const itGroup = document.getElementById('internalTypeGroup');
   if (itGroup) itGroup.style.display = (document.getElementById('gearType').value === 'internal') ? 'block' : 'none';
