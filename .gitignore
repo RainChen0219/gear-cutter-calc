@@ -5,3 +5,20 @@
 # 临时文件
 .DS_Store
 *.log
+
+# node 依赖（部署时 npm install 自动装）
+node_modules/
+
+# 飞书导出的运行时文件
+*.manifest.json
+*.ndjson
+
+# 开发截图和 demo html
+*.png
+p0_cutter_profile_demo.html
+p1_cutter_profile_demo.html
+p2_cup_profile.html
+changelog_render.html
+cover.html
+poster.html
+icon_test.html

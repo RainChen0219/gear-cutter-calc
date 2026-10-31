@@ -1,0 +1,13 @@
+{
+  "name": "gear-cutter-calc-mcp",
+  "version": "1.0.1",
+  "description": "齿轮/花键插齿刀选刀与配刀参数计算 MCP server（Streamable HTTP）",
+  "private": true,
+  "scripts": {
+    "start": "node mcp/server-http.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "jsdom": "^30.1.3"
+  }
+}
