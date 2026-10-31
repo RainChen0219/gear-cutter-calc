@@ -3105,6 +3105,7 @@ var pendingSuggestions = {};   // id===true 表示当前为"未采纳建议值"
 // R12：待采纳软填充的逐条元信息 {label, source, value}
 var pendingMeta = {};
 var FIELD_LABELS = {
+  m: '模数 m', z: '齿数 z', alpha: '压力角 α', gearType: '齿型', standardNo: '标准号',
   daMeasured: '大径实测', dfMeasured: '小径实测',
   tipChamferC: '齿顶倒角深 c（hK）',
   fpt: '单个齿距偏差 fpt', Fp: '齿距累积公差 Fp',
@@ -3112,6 +3113,8 @@ var FIELD_LABELS = {
   thSmax: '实际齿厚最大 Smax', thSmin: '实际齿厚最小 Smin',
   thSvmax: '作用齿厚最大 Svmax', thSvmin: '作用齿厚最小 Svmin'
 };
+// OCR 拍照建议前的原值快照 {value, confirmed}，用户清空拒绝时恢复原值
+var _ocrPrev = {};
 // R5：线性尺寸字段集合（内部以 mm 计算，显示/输入边界换算；μm 类公差不在内）
 var LINEAR_FIELD_IDS={daMeasured:1,dfMeasured:1,daMax:1,daMin:1,dfMax:1,dfMin:1,toothThickness:1,slotWidth:1,faceWidth:1,totalHeight:1,da0Measured:1,s0Front:1,formDiameter:1,tipRadiusR:1,tipChamferC:1,ballDiameter:1,ballMeasurement:1,ballMUpper:1,ballMLower:1,ballMMax:1,ballMMin:1,commonNW:1,thSmax:1,thSmin:1,thSvmax:1,thSvmin:1};
 var suggestSetting = false;
@@ -3166,10 +3169,32 @@ function suggest(id,val,dec){
   var btn=document.getElementById(id+'_accept'); if(btn) btn.style.display='inline-block';
   refreshAcceptBar();
 }
+// OCR 专用：用户主动拍照，识别值强制进入待确认（可覆盖已有值/已确认值），原值保存以便拒绝时恢复
+function suggestForOcr(id,val){
+  var el=document.getElementById(id);
+  if(!el) return false;
+  if(val===null||val===undefined||(typeof val==='number'&&isNaN(val))) return false;
+  var v=String(val);
+  // 识别值与当前值相同：无需打扰
+  if(String(el.value)===v && pendingSuggestions[id]!==true) return false;
+  // 保存当前原值（仅当当前不是待确认态）
+  if(pendingSuggestions[id]!==true){
+    _ocrPrev[id]={ value: el.value, confirmed: el.dataset.confirmed==='1' };
+  }
+  suggestSetting=true;
+  el.value=v;
+  el.classList.add('suggested-input');
+  suggestSetting=false;
+  pendingSuggestions[id]=true;
+  pendingMeta[id]={ label: FIELD_LABELS[id]||id, value: v, source: '拍照识图' };
+  var btn=document.getElementById(id+'_accept'); if(btn) btn.style.display='inline-block';
+  return true;
+}
 function acceptSuggestion(id){
   var el=document.getElementById(id); if(!el) return;
   pendingSuggestions[id]=false;
   delete pendingMeta[id];
+  delete _ocrPrev[id];
   el.classList.remove('suggested-input');
   el.dataset.confirmed='1';
   el.dataset.fromSuggest='1';   // 标记该值来自软填采纳（区别于纯手填），上游参数变化时允许重新推算
@@ -3183,7 +3208,17 @@ function clearAllSuggestions(){
   Object.keys(pendingSuggestions).forEach(function(id){
     if(pendingSuggestions[id]===true){
       var el=document.getElementById(id);
-      if(el && el.dataset.confirmed!=='1'){ el.value=''; el.classList.remove('suggested-input'); }
+      if(el){
+        if(_ocrPrev.hasOwnProperty(id)){
+          // OCR 建议被拒绝：恢复拍照前原值
+          el.value=_ocrPrev[id].value;
+          if(_ocrPrev[id].confirmed) el.dataset.confirmed='1';
+          delete _ocrPrev[id];
+        } else if(el.dataset.confirmed!=='1'){
+          el.value='';
+        }
+        el.classList.remove('suggested-input');
+      }
       var btn=document.getElementById(id+'_accept'); if(btn) btn.style.display='none';
       pendingSuggestions[id]=false;
       delete pendingMeta[id];
@@ -3650,14 +3685,15 @@ function suggestBallDp() {
   }
   function applyFields(fields){
     var ids = [];
-    if(fields.m != null){ suggest('m', Number(fields.m)); ids.push('m'); }
-    if(fields.z != null){ suggest('z', Number(fields.z)); ids.push('z'); }
-    if(fields.alpha != null){ suggest('alpha', String(fields.alpha)); ids.push('alpha'); }
-    if(fields.gearType != null){ suggest('gearType', String(fields.gearType)); ids.push('gearType'); }
-    // 标注来源为拍照识图
-    ids.forEach(function(id){
-      if(pendingMeta[id]){ pendingMeta[id].source = '拍照识图'; }
-    });
+    // 先设压力角并触发联动，确保标准号下拉选项已按新压力角重建
+    if(fields.alpha != null){
+      if(suggestForOcr('alpha', String(fields.alpha))) ids.push('alpha');
+      document.getElementById('alpha').dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    if(fields.gearType != null && suggestForOcr('gearType', String(fields.gearType))) ids.push('gearType');
+    if(fields.m != null && suggestForOcr('m', Number(fields.m))) ids.push('m');
+    if(fields.z != null && suggestForOcr('z', Number(fields.z))) ids.push('z');
+    if(fields.standardNo != null && suggestForOcr('standardNo', String(fields.standardNo))) ids.push('standardNo');
     if(ids.length) refreshAcceptBar();
     return ids.length;
   }
