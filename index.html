@@ -558,6 +558,9 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   <div class="subtitle">内/外花键与齿轮 → 插齿刀选刀与成品刀参数</div>
   <details class="version-details">
     <summary>版本记录与修订日志（点击展开） <button type="button" onclick="event.preventDefault();openChangelog(true);" style="margin-left:8px;font-size:12px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 10px;cursor:pointer;">查看更新</button></summary>
+  <div class="subtitle"><b style="color:#1d4ed8;">【V1.1.0 · 拍照识图自动填写（2026-11-02）】</b>
+  <b>新增 / 优化</b>：相机拍照或相册选图，自动识别参数并以橙色待确认填入，核对采纳后再计算；共识别 18 个字段（模数/齿数/压力角/齿型/标准号、量棒与跨棒距、fpt/Fp 公差、大径小径、齿顶高/全齿高/变位）。大径小径采用确定性匹配——模型只读直径、后端按理论公式在容差内匹配并物理校验，复杂内齿圈稳定判齿顶圆/齿根圆；前端图片压缩（最长边 1600px、JPEG 质量 0.8）上传更快；识图前自动清理 18 个字段，重复识图不残留上一张图信息。待确认软填与计算隔离：未采纳的识别值不参与计算，核心字段未确认时拦截推算。后端固定域名+命名隧道+Docker 部署，HTTPS 免备案，大模型密钥不暴露前端。<br>
+  <b>修复</b>：修复工程符号（°、±、φ、Ø、mm）导致识别丢字段，后端统一符号清洗；修复纯视觉模型在多 φ 剖视图判齿顶齿根结果不稳定（两次结果不一致），改确定性匹配；公差 mm 小数自动换算 μm，量棒距/大径小径上下限填反自动交换；标准号排除精度标准 GB/T 10095，避免误填。<br>
   <div class="subtitle"><b style="color:#1d4ed8;">【V1.0.1 · 刀具齿形尺寸链补全（2026-10-29）】</b>
   <b>齿形尺寸链补全</b>：把做刀图纸需要、此前未显式输出的刀具齿形参数全部补齐并同步到刀档卡与设计图纸参数表（⑨）——刀具齿根圆 d_f0（内齿 d_f0=小径−2a₀−2c；外齿 d_f0=2a₀−大径−2c）、齿顶高 ha₀/齿根高 hf₀/全齿高 h₀、分度圆齿厚 s₀=m(π/2+2x₀tanα)、前端面修正齿形角（含前角 γ、后角 αe 修正）。插齿刀齿根间隙系数固定 c*=0.25（成都工具研究所算例 + GB/T 1356），与工件基本齿廓配合顶隙（GB c=0.25、DIN cP=0.10）是两个概念，不随工件标准变化。<br>
   <b>修复</b>：短齿制/手改齿廓系数不再误判为标准现货刀、改走包络；R/倒棱未填时给经验默认（0.1m）并标注"需按图纸核对"；草稿恢复不再自动还原实测大/小径与刀坯实测值，避免换工件后旧实测值污染配刀。五用例回归通过，新增值与各用例设计图一致。<br>
