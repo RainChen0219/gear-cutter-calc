@@ -228,7 +228,20 @@ input.suggested-input {
 }
 .ocr-upload-bar .ocr-title { font-size: var(--fs-sm); font-weight: 600; color: #1e40af; margin-bottom: var(--space-2); }
 .ocr-upload-bar .ocr-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.ocr-upload-bar input[type="file"] { font-size: var(--fs-sm); }
+.ocr-hidden-input { display: none; }
+.ocr-btn {
+  flex: 1 1 0; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  height: 46px; padding: 0 var(--space-3);
+  background: #fff; border: 1px solid #bfdbfe; border-radius: var(--radius-md);
+  color: #1e40af; cursor: pointer;
+  font-size: var(--fs-sm); font-weight: 600; white-space: nowrap;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.ocr-btn svg { width: 24px; height: 24px; display: block; flex: 0 0 auto; }
+.ocr-btn-text { line-height: 1; }
+.ocr-btn:hover { background: #1e40af; color: #fff; border-color: #1e40af; }
+.ocr-btn:active { background: #1e3a8a; border-color: #1e3a8a; }
 .ocr-status { font-size: var(--fs-sm); color: #374151; }
 .ocr-status.error { color: #b91c1c; font-weight: 600; }
 .ocr-status.success { color: #047857; font-weight: 600; }
@@ -558,9 +571,21 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   <div class="section-title">基本参数（必填）</div>
 
   <div class="ocr-upload-bar" id="ocrUploadBar">
-    <div class="ocr-title">拍照识图自动填写（识别后请逐字段核对采纳）</div>
+    <div class="ocr-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span>拍照识图自动填写（识别后请逐字段核对采纳）</span>
+      <span style="display:inline-block;flex-shrink:0;font-size:12px;font-weight:600;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;border-radius:999px;padding:2px 10px;letter-spacing:0.5px;">Beta 测试版</span>
+    </div>
     <div class="ocr-row">
-      <input type="file" id="ocrFileInput" accept="image/*" capture="environment">
+      <input type="file" id="ocrCameraInput" class="ocr-hidden-input" accept="image/*" capture="environment">
+      <input type="file" id="ocrFileInput" class="ocr-hidden-input" accept="image/*">
+      <label for="ocrCameraInput" class="ocr-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span class="ocr-btn-text">拍照</span>
+      </label>
+      <label for="ocrFileInput" class="ocr-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="ocr-btn-text">相册</span>
+      </label>
       <span id="ocrStatus" class="ocr-status"></span>
     </div>
   </div>
@@ -3107,6 +3132,7 @@ var pendingMeta = {};
 var FIELD_LABELS = {
   m: '模数 m', z: '齿数 z', alpha: '压力角 α', gearType: '齿型', standardNo: '标准号',
   daMeasured: '大径实测', dfMeasured: '小径实测',
+  daMax: '大径上限', daMin: '大径下限', dfMax: '小径上限', dfMin: '小径下限',
   tipChamferC: '齿顶倒角深 c（hK）',
   fpt: '单个齿距偏差 fpt', Fp: '齿距累积公差 Fp',
   ess: '齿厚上偏差 Ess', esi: '齿厚下偏差 Esi',
@@ -3665,23 +3691,68 @@ function suggestBallDp() {
 
 /* ===== v1.1 拍照识图 OCR（qwen-vl-ocr，经服务器代理，DASHSCOPE 密钥不暴露前端） ===== */
 (function(){
-  var OCR_API_BASE = 'https://constantly-heavily-therefore-stones.trycloudflare.com';
+  var OCR_API_BASE = 'https://api.jingmeicuttingtool.com';
   var OCR_TOKEN = '279ea08eee5ef5ac2988649d0e597c8ba8e8f37731b00feb';
   var fileInput = document.getElementById('ocrFileInput');
+  var cameraInput = document.getElementById('ocrCameraInput');
   var statusEl = document.getElementById('ocrStatus');
-  if(!fileInput || !statusEl) return;
+  if((!fileInput && !cameraInput) || !statusEl) return;
 
   function setStatus(msg, type){
     statusEl.textContent = msg || '';
     statusEl.className = 'ocr-status' + (type ? ' ' + type : '');
   }
+  var OCR_MAX_EDGE = 1600;   // 上传前最长边限制，足够 OCR 看清文字，大幅减小体积
+  var OCR_JPEG_QUALITY = 0.8;
   function readFileAsDataURL(file){
     return new Promise(function(resolve, reject){
       var reader = new FileReader();
-      reader.onload = function(){ resolve(reader.result); };
+      reader.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var scale = Math.min(1, OCR_MAX_EDGE / Math.max(w, h));
+          var tw = Math.round(w * scale), th = Math.round(h * scale);
+          var canvas = document.createElement('canvas');
+          canvas.width = tw; canvas.height = th;
+          canvas.getContext('2d').drawImage(img, 0, 0, tw, th);
+          resolve(canvas.toDataURL('image/jpeg', OCR_JPEG_QUALITY));
+        };
+        img.onerror = function(){ reject(new Error('图片解码失败')); };
+        img.src = reader.result;
+      };
       reader.onerror = function(){ reject(new Error('读取图片失败')); };
       reader.readAsDataURL(file);
     });
+  }
+  // OCR 可填写的全部字段（与 applyFields 对应）；重新识图时只重置这些，避免上一张图数据残留
+  var OCR_FIELD_IDS = ['alpha','gearType','m','z','standardNo','workPrecision',
+    'ballDiameter','ballMMin','ballMMax','daMax','daMin','dfMax','dfMin',
+    'fpt','Fp','ha','totalHeight','x'];
+  // 重新识图前：把 OCR 字段全部恢复到页面初始状态，并清空待确认/原值快照，防止两次识图信息重合
+  function resetForNewOcr(){
+    OCR_FIELD_IDS.forEach(function(id){
+      delete pendingSuggestions[id];
+      delete pendingMeta[id];
+      delete _ocrPrev[id];
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.classList.remove('suggested-input');
+      delete el.dataset.confirmed;
+      delete el.dataset.fromSuggest;
+      el.value = '';
+      var btn = document.getElementById(id + '_accept');
+      if(btn) btn.style.display = 'none';
+    });
+    // 恢复下拉默认值（与页面初始一致）
+    var alphaEl = document.getElementById('alpha');
+    if(alphaEl) alphaEl.value = '20';
+    var gearEl = document.getElementById('gearType');
+    if(gearEl) gearEl.value = 'external';
+    // 触发压力角 change：重建标准号下拉，并把 ha/hf/c 恢复初始；其余联动因 m 为空会自动退出
+    if(alphaEl) alphaEl.dispatchEvent(new Event('change', { bubbles: true }));
+    refreshAcceptBar();
+    if(typeof clearFieldErrors === 'function') clearFieldErrors();
   }
   function applyFields(fields){
     var ids = [];
@@ -3694,13 +3765,36 @@ function suggestBallDp() {
     if(fields.m != null && suggestForOcr('m', Number(fields.m))) ids.push('m');
     if(fields.z != null && suggestForOcr('z', Number(fields.z))) ids.push('z');
     if(fields.standardNo != null && suggestForOcr('standardNo', String(fields.standardNo))) ids.push('standardNo');
+    // 精度等级：设值后触发 change，让系统按既有逻辑联动（刀具精度推荐、fpt/Fp 查表）
+    if(fields.workPrecision != null && suggestForOcr('workPrecision', String(fields.workPrecision))){
+      ids.push('workPrecision');
+      document.getElementById('workPrecision').dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    // 测量几何：量棒直径、跨棒距上下限
+    if(fields.ballDiameter != null && suggestForOcr('ballDiameter', Number(fields.ballDiameter))) ids.push('ballDiameter');
+    if(fields.ballMMin != null && suggestForOcr('ballMMin', Number(fields.ballMMin))) ids.push('ballMMin');
+    if(fields.ballMMax != null && suggestForOcr('ballMMax', Number(fields.ballMMax))) ids.push('ballMMax');
+    // 大径/小径上下限（图纸实测值，橙色待确认；单值时后端已让 max/min 同值）
+    if(fields.daMax != null && suggestForOcr('daMax', Number(fields.daMax))) ids.push('daMax');
+    if(fields.daMin != null && suggestForOcr('daMin', Number(fields.daMin))) ids.push('daMin');
+    if(fields.dfMax != null && suggestForOcr('dfMax', Number(fields.dfMax))) ids.push('dfMax');
+    if(fields.dfMin != null && suggestForOcr('dfMin', Number(fields.dfMin))) ids.push('dfMin');
+    // 公差 fpt/Fp 最后填：图纸值覆盖 workPrecision 联动产生的查表值
+    if(fields.fpt != null && suggestForOcr('fpt', Number(fields.fpt))) ids.push('fpt');
+    if(fields.Fp != null && suggestForOcr('Fp', Number(fields.Fp))) ids.push('Fp');
+    // 高级选项：齿顶高系数、全齿高、变位系数（图纸值，橙色待确认）
+    if(fields.ha != null && suggestForOcr('ha', Number(fields.ha))) ids.push('ha');
+    if(fields.totalHeight != null && suggestForOcr('totalHeight', Number(fields.totalHeight))) ids.push('totalHeight');
+    if(fields.x != null && suggestForOcr('x', Number(fields.x))) ids.push('x');
     if(ids.length) refreshAcceptBar();
     return ids.length;
   }
 
-  fileInput.addEventListener('change', function(){
-    var file = fileInput.files && fileInput.files[0];
+  function handleChange(e){
+    var input = e.target;
+    var file = input.files && input.files[0];
     if(!file) return;
+    resetForNewOcr();   // 新识图前清掉上一张图的全部 OCR 数据，避免两次信息重合
     setStatus('正在识别，请稍候…', 'loading');
     readFileAsDataURL(file).then(function(dataUrl){
       return fetch(OCR_API_BASE + '/ocr', {
@@ -3719,8 +3813,12 @@ function suggestBallDp() {
       else setStatus('未能从图中识别出有效参数，请更换清晰图片或手动填写。', 'error');
     }).catch(function(err){
       setStatus('识别失败：' + (err.message || err), 'error');
+    }).finally(function(){
+      input.value = '';   // 清空文件选择，允许再次选择同一文件时重新触发 change
     });
-  });
+  }
+  if(fileInput) fileInput.addEventListener('change', handleChange);
+  if(cameraInput) cameraInput.addEventListener('change', handleChange);
 })();
 
 function calculate() {
@@ -5329,8 +5427,22 @@ function _doCalculate() {
  *    内容变了（新增修复）就再弹一次，内容没变不再打扰。
  *  - 跨版本：用户上次看到版本之后新发布的所有版本，连同未发布内容一并展示。
  */
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.1.0';
 const RELEASED_LOG = [
+  { version:'1.1.0', date:'2026-11-02', features:[
+      '新增拍照识图自动填写：相机拍照或相册选图，自动识别参数并以橙色待确认填入，核对采纳后再计算',
+      '识别 18 个字段：模数/齿数/压力角/齿型/标准号、量棒与跨棒距、fpt/Fp 公差、大径小径、齿顶高/全齿高/变位',
+      '大径小径确定性匹配：模型只读直径、后端按理论公式在容差内匹配并物理校验，复杂内齿圈稳定判齿顶圆/齿根圆',
+      '前端图片压缩：最长边 1600px、JPEG 质量 0.8，上传更快',
+      '识图前自动清理 18 个字段，重复识图不残留上一张图信息',
+      '待确认软填与计算隔离：未采纳的识别值不参与计算，核心字段未确认时拦截推算',
+      '后端固定域名+命名隧道+Docker 部署，HTTPS 免备案，大模型密钥不暴露前端',
+    ], fixes:[
+      '修复工程符号（°、±、φ、Ø、mm）导致识别丢字段，后端统一符号清洗',
+      '修复纯视觉模型在多 φ 剖视图判齿顶齿根结果不稳定（两次结果不一致），改确定性匹配',
+      '公差 mm 小数自动换算 μm，量棒距/大径小径上下限填反自动交换',
+      '标准号排除精度标准 GB/T 10095，避免误填',
+    ]},
   { version:'1.0.1', date:'2026-10-29', features:[
       '刀具齿根圆 d_f0 显式输出（内齿 d_f0=小径−2a₀−2c；外齿 d_f0=2a₀−大径−2c）',
       '齿顶高 ha₀ / 齿根高 hf₀ / 全齿高 h₀ 显式输出',
