@@ -558,7 +558,7 @@ input.invalid { border-color: var(--color-danger); background: var(--color-dange
   <div class="subtitle">内/外花键与齿轮 → 插齿刀选刀与成品刀参数</div>
   <details class="version-details">
     <summary>版本记录与修订日志（点击展开） <button type="button" onclick="event.preventDefault();openChangelog(true);" style="margin-left:8px;font-size:12px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 10px;cursor:pointer;">查看更新</button></summary>
-  <div class="subtitle"><b style="color:#1d4ed8;">【V1.1.0 · 拍照识图自动填写（2026-11-02）】</b>
+  <div class="subtitle"><b style="color:#1d4ed8;">【V1.1.0 · 拍照识图自动填写（2026-11-04）】</b>
   <b>新增 / 优化</b>：相机拍照或相册选图，自动识别参数并以橙色待确认填入，核对采纳后再计算；共识别 18 个字段（模数/齿数/压力角/齿型/标准号、量棒与跨棒距、fpt/Fp 公差、大径小径、齿顶高/全齿高/变位）。大径小径采用确定性匹配——模型只读直径、后端按理论公式在容差内匹配并物理校验，复杂内齿圈稳定判齿顶圆/齿根圆；前端图片压缩（最长边 1600px、JPEG 质量 0.8）上传更快；识图前自动清理 18 个字段，重复识图不残留上一张图信息。待确认软填与计算隔离：未采纳的识别值不参与计算，核心字段未确认时拦截推算。后端固定域名+命名隧道+Docker 部署，HTTPS 免备案，大模型密钥不暴露前端。<br>
   <b>修复</b>：修复工程符号（°、±、φ、Ø、mm）导致识别丢字段，后端统一符号清洗；修复纯视觉模型在多 φ 剖视图判齿顶齿根结果不稳定（两次结果不一致），改确定性匹配；公差 mm 小数自动换算 μm，量棒距/大径小径上下限填反自动交换；标准号排除精度标准 GB/T 10095，避免误填。<br>
   <div class="subtitle"><b style="color:#1d4ed8;">【V1.0.1 · 刀具齿形尺寸链补全（2026-10-29）】</b>
@@ -5432,7 +5432,7 @@ function _doCalculate() {
  */
 const APP_VERSION = '1.1.0';
 const RELEASED_LOG = [
-  { version:'1.1.0', date:'2026-11-02', features:[
+  { version:'1.1.0', date:'2026-11-04', features:[
       '新增拍照识图自动填写：相机拍照或相册选图，自动识别参数并以橙色待确认填入，核对采纳后再计算',
       '识别 18 个字段：模数/齿数/压力角/齿型/标准号、量棒与跨棒距、fpt/Fp 公差、大径小径、齿顶高/全齿高/变位',
       '大径小径确定性匹配：模型只读直径、后端按理论公式在容差内匹配并物理校验，复杂内齿圈稳定判齿顶圆/齿根圆',
